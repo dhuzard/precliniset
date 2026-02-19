@@ -111,7 +111,16 @@ class TestDataTablesAPI(unittest.TestCase):
         self.assertIn('protocol_name', first_row)
         self.assertIn('group_name', first_row)
         self.assertIn('project_name', first_row)
-        self.assertIn('actions', first_row)
+        self.assertIn('can_view', first_row)
+        self.assertIn('can_edit', first_row)
+        self.assertIn('can_delete', first_row)
+        self.assertIn('action_urls', first_row)
+        self.assertIsInstance(first_row['action_urls'], dict)
+        self.assertIn('view', first_row['action_urls'])
+        self.assertIn('edit', first_row['action_urls'])
+        self.assertIn('analyze', first_row['action_urls'])
+        self.assertIn('download', first_row['action_urls'])
+        self.assertIn('delete', first_row['action_urls'])
 
     def test_filter_by_protocol(self):
         """Test filtering by protocol."""

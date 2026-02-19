@@ -8,7 +8,14 @@ export interface DataTable {
     is_archived: boolean;
     can_edit: boolean;
     can_delete: boolean;
-    actions: string; // The HTML actions column from legacy API, we might not use it directly but good to have
+    can_view?: boolean;
+    action_urls?: {
+        view?: string;
+        edit?: string;
+        analyze?: string;
+        download?: string;
+        delete?: string;
+    };
 }
 
 export interface DataTableListResponse {

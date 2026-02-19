@@ -1,6 +1,6 @@
 # app/api/datatables_api.py
 from datetime import datetime
-from flask import g, request, render_template_string, current_app, url_for
+from flask import g, request, current_app, url_for
 from flask_restx import Resource, fields
 from pydantic import ValidationError
 
@@ -170,58 +170,6 @@ class DataTableItem(Resource):
 class ServerSideDataTableList(Resource):
     decorators = [token_required]
 
-    def _render_datatable_actions(self, datatable, permissions):
-        """
-        Renders the HTML for the action buttons for a given datatable.
-        
-        Args:
-            datatable: DataTable instance
-            permissions: Pre-computed permission dict for the datatable's project
-        """
-        # Extract permission flags from pre-computed dict
-        can_view = permissions.get('can_view_datatables', False)
-        can_edit = permissions.get('can_edit_datatables', False)
-        can_delete = permissions.get('can_delete_datatables', False)
-        
-        return render_template_string(
-            """
-            <div class="btn-group" role="group">
-                {% if can_view %}
-                <a href="{{ url_for('datatables.view_data_table', datatable_id=datatable.id) }}" class="btn btn-sm btn-info" title="View">
-                    <i class="fas fa-eye"></i>
-                </a>
-                {% endif %}
-                {% if can_edit %}
-                <a href="{{ url_for('datatables.edit_data_table', id=datatable.id) }}" class="btn btn-sm btn-primary" title="Edit">
-                    <i class="fas fa-edit"></i>
-                </a>
-                {% endif %}
-                {% if can_view %}
-                <a href="{{ url_for('datatables.analyze_datatable', datatable_id=datatable.id) }}" class="btn btn-sm btn-success" title="Analyze">
-                    <i class="fas fa-chart-bar"></i>
-                </a>
-                {% endif %}
-                {% if can_view %}
-                <a href="{{ url_for('datatables.download_data_table', id=datatable.id) }}" class="btn btn-sm btn-secondary" title="Download">
-                    <i class="fas fa-download"></i>
-                </a>
-                {% endif %}
-                {% if can_delete %}
-                <form method="POST" action="{{ url_for('datatables.delete_data_table', id=datatable.id) }}" style="display:inline;" class="confirm-delete-form">
-                    <input type="hidden" name="csrf_token" value="CSRF_TOKEN_PLACEHOLDER"/>
-                    <button type="submit" class="btn btn-sm btn-danger" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </form>
-                {% endif %}
-            </div>
-            """,
-            datatable=datatable,
-            can_view=can_view,
-            can_edit=can_edit,
-            can_delete=can_delete
-        )
-
     @server_side_ns.doc('list_server_side_datatables')
     def get(self):
         """Return a paginated and filtered list of datatables for DataTables."""
@@ -292,7 +240,16 @@ class ServerSideDataTableList(Resource):
                     'group_name': dt.group.name if dt.group else '',
                     'protocol_name': dt.protocol.name if dt.protocol else '',
                     'project_name': dt.group.project.name if dt.group and dt.group.project else '',
-                    'actions': self._render_datatable_actions(dt, perms)  # Pass pre-computed permissions
+                    'can_view': perms.get('can_view_datatables', False),
+                    'can_edit': perms.get('can_edit_datatables', False),
+                    'can_delete': perms.get('can_delete_datatables', False),
+                    'action_urls': {
+                        'view': url_for('datatables.view_data_table', datatable_id=dt.id),
+                        'edit': url_for('datatables.edit_data_table', id=dt.id),
+                        'analyze': url_for('datatables.analyze_datatable', datatable_id=dt.id),
+                        'download': url_for('datatables.download_data_table', id=dt.id),
+                        'delete': url_for('datatables.delete_data_table', id=dt.id),
+                    }
                 })
 
         return {

@@ -1,4 +1,7 @@
 # app/helpers.py
+import glob
+import json
+import os
 from datetime import datetime
 from io import BytesIO
 import math
@@ -67,6 +70,48 @@ def send_email(to, subject, template_path, **kwargs):
 
     send_email_task.delay(to, subject, template_path, **kwargs)
     return True
+
+
+def get_vite_entry_assets(entry_name='src/main.tsx'):
+    """Return Vite-built JS/CSS asset URLs for a given entry from manifest.json.
+
+    Falls back to best-effort glob matching when the manifest is unavailable.
+    """
+    manifest_path = os.path.join(current_app.static_folder, 'dist', '.vite', 'manifest.json')
+
+    try:
+        with open(manifest_path, 'r', encoding='utf-8') as f:
+            manifest = json.load(f)
+
+        entry = manifest.get(entry_name)
+        if not entry:
+            raise KeyError(f"Entry '{entry_name}' not found in Vite manifest")
+
+        js_file = entry.get('file')
+        css_files = entry.get('css', [])
+
+        return {
+            'js': url_for('static', filename=f"dist/{js_file}") if js_file else None,
+            'css': [url_for('static', filename=f"dist/{css_file}") for css_file in css_files],
+        }
+    except Exception as e:
+        current_app.logger.warning(f"Failed to read Vite manifest ({manifest_path}): {e}")
+
+        # Fallback: pick latest matching main bundle(s)
+        js_candidates = sorted(glob.glob(os.path.join(current_app.static_folder, 'dist', 'assets', 'main-*.js')))
+        css_candidates = sorted(glob.glob(os.path.join(current_app.static_folder, 'dist', 'assets', 'main-*.css')))
+
+        js_url = None
+        if js_candidates:
+            js_rel = os.path.relpath(js_candidates[-1], current_app.static_folder).replace('\\', '/')
+            js_url = url_for('static', filename=js_rel)
+
+        css_urls = []
+        if css_candidates:
+            css_rel = os.path.relpath(css_candidates[-1], current_app.static_folder).replace('\\', '/')
+            css_urls.append(url_for('static', filename=css_rel))
+
+        return {'js': js_url, 'css': css_urls}
 
 
 def sort_analytes_list_by_name(analytes_list):

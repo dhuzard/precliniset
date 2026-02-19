@@ -9,6 +9,8 @@ import {
     getCoreRowModel,
     flexRender,
     createColumnHelper,
+    CellContext,
+    HeaderContext,
     SortingState,
     RowSelectionState,
 } from '@tanstack/react-table';
@@ -26,6 +28,15 @@ interface Props {
 
 const columnHelper = createColumnHelper<DataTable>();
 
+const serverSideColumnIndexMap: Record<string, number> = {
+    select: 0,
+    date: 1,
+    protocol_name: 2,
+    group_name: 3,
+    project_name: 4,
+    actions: 5,
+};
+
 const DataTableList: React.FC<Props> = ({ initialGroupId, csrfToken, protocols = [], urls }) => {
     const [pagination, setPagination] = useState({
         pageIndex: 0,
@@ -41,11 +52,60 @@ const DataTableList: React.FC<Props> = ({ initialGroupId, csrfToken, protocols =
     const [dateFrom, setDateFrom] = useState<string>('');
     const [dateTo, setDateTo] = useState<string>('');
 
+    const handleDeleteOne = (row: DataTable) => {
+        const deleteUrl = row.action_urls?.delete;
+        if (!deleteUrl) return;
+        if (!confirm(`Are you sure you want to delete datatable #${row.id}?`)) return;
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = deleteUrl;
+
+        const csrf = document.createElement('input');
+        csrf.type = 'hidden';
+        csrf.name = 'csrf_token';
+        csrf.value = csrfToken || '';
+        form.appendChild(csrf);
+
+        document.body.appendChild(form);
+        form.submit();
+    };
+
+    const renderActionsCell = (info: CellContext<DataTable, unknown>) => {
+        const row = info.row.original;
+
+        return (
+            <div className="flex items-center gap-2">
+                {row.can_view && row.action_urls?.view && (
+                    <a href={row.action_urls.view} className="text-indigo-600 hover:text-indigo-800 text-xs font-medium">View</a>
+                )}
+                {row.can_edit && row.action_urls?.edit && (
+                    <a href={row.action_urls.edit} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Edit</a>
+                )}
+                {row.can_view && row.action_urls?.analyze && (
+                    <a href={row.action_urls.analyze} className="text-emerald-600 hover:text-emerald-800 text-xs font-medium">Analyze</a>
+                )}
+                {row.can_view && row.action_urls?.download && (
+                    <a href={row.action_urls.download} className="text-slate-600 hover:text-slate-800 text-xs font-medium">Download</a>
+                )}
+                {row.can_delete && row.action_urls?.delete && (
+                    <button
+                        type="button"
+                        onClick={() => handleDeleteOne(row)}
+                        className="text-red-600 hover:text-red-800 text-xs font-medium"
+                    >
+                        Delete
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     // Column definitions
     const columns = useMemo(() => [
         {
             id: 'select',
-            header: ({ table }: any) => (
+            header: ({ table }: HeaderContext<DataTable, unknown>) => (
                 <IndeterminateCheckbox
                     {...{
                         checked: table.getIsAllRowsSelected(),
@@ -55,7 +115,7 @@ const DataTableList: React.FC<Props> = ({ initialGroupId, csrfToken, protocols =
                     className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
             ),
-            cell: ({ row }: any) => (
+            cell: ({ row }: CellContext<DataTable, unknown>) => (
                 <IndeterminateCheckbox
                     {...{
                         checked: row.getIsSelected(),
@@ -91,14 +151,13 @@ const DataTableList: React.FC<Props> = ({ initialGroupId, csrfToken, protocols =
         columnHelper.display({
             id: 'actions',
             header: 'Actions',
-            cell: info => <div dangerouslySetInnerHTML={{ __html: info.row.original.actions }} />,
+            cell: renderActionsCell,
             enableSorting: false,
         })
-    ], []);
+    ], [csrfToken]);
 
     const getColumnIndexForId = (id: string) => {
-        const map = ['select', 'id', 'date', 'protocol_name', 'group_name', 'project_name', 'actions'];
-        return map.indexOf(id);
+        return serverSideColumnIndexMap[id] ?? 1;
     };
 
     const { data, isLoading, isError, error, refetch, isFetching } = useQuery({

@@ -43,6 +43,7 @@ from ..extensions import db
 from ..forms import DataTableForm, DataTableUploadForm, EditDataTableForm
 from ..forms.controlled_molecules import MoleculeUsageForm
 from ..helpers import (
+    get_vite_entry_assets,
     get_field_types,
     get_ordered_column_names,
     get_ordered_columns_for_single_datatable_download,
@@ -803,8 +804,14 @@ def list_group_datatables_react(group_id):
 
     # Fetch all protocols for the filter dropdown
     all_protocols = ProtocolModel.query.order_by(ProtocolModel.name).all()
+    vite_assets = get_vite_entry_assets('src/main.tsx')
 
-    return render_template('datatables/list_group_datatables_react.html', group=group_obj, protocols=all_protocols)
+    return render_template(
+        'datatables/list_group_datatables_react.html',
+        group=group_obj,
+        protocols=all_protocols,
+        vite_assets=vite_assets,
+    )
 @datatables_bp.route('/batch_delete_datatables', methods=['POST'])
 @login_required
 def batch_delete_datatables():

@@ -4,7 +4,9 @@
 
 {% block head_extra %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='dist/assets/main-Bhw-DM_e.css') }}">
+{% for css_href in (vite_assets.css if vite_assets and vite_assets.css else []) %}
+<link rel="stylesheet" href="{{ css_href }}">
+{% endfor %}
 {% endblock %}
 
 {% block content %}
@@ -18,5 +20,7 @@
 
 {% block scripts %}
 {{ super() }}
-<script type="module" src="{{ url_for('static', filename='dist/assets/main-BKZ1cX88.js') }}"></script>
+{% if vite_assets and vite_assets.js %}
+<script type="module" src="{{ vite_assets.js }}"></script>
+{% endif %}
 {% endblock %}

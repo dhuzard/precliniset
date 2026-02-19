@@ -1,9 +1,14 @@
 # app/utils/files.py
 import io
 import os
-import magic
+import mimetypes
 import pandas as pd
 from flask import current_app
+
+try:
+    import magic  # type: ignore
+except Exception:  # pragma: no cover - depends on system libmagic availability
+    magic = None
 
 # Centralized allowed MIME types mapped to extensions
 ALLOWED_MIME_TYPES = {
@@ -39,11 +44,29 @@ def validate_file_type(file_storage, allowed_mimes_dict=None):
     if not ext:
          raise ValueError("File has no extension.")
 
-    # 2. Read magic bytes
+    # 2. Read magic bytes (preferred) with graceful fallback when libmagic
+    # is unavailable (e.g. some Windows/dev/test environments).
     header = file_storage.read(2048)
     file_storage.seek(0) # Reset pointer
-    
-    detected_mime = magic.from_buffer(header, mime=True)
+
+    detected_mime = None
+    if magic is not None:
+        try:
+            detected_mime = magic.from_buffer(header, mime=True)
+        except Exception:
+            detected_mime = None
+
+    if not detected_mime:
+        # Fallback 1: Use Werkzeug-provided content type when available.
+        detected_mime = getattr(file_storage, 'content_type', None)
+
+    if not detected_mime:
+        # Fallback 2: Guess from file extension.
+        guessed_mime, _ = mimetypes.guess_type(filename)
+        detected_mime = guessed_mime
+
+    if not detected_mime:
+        raise ValueError("Could not determine file MIME type.")
     
     # 3. Check if MIME is allowed
     if detected_mime not in allowed_mimes_dict:
