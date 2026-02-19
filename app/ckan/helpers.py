@@ -53,12 +53,17 @@ def validate_external_url(url):
         raise ValueError(f"URL validation failed.")
 
 
-def ckan_request(method, url, api_key, **kwargs):
+def ckan_request(method, url, api_key, verify_ssl=True, **kwargs):
     """Helper function to make requests to the CKAN API with SSRF protection."""
     headers = {
         'Authorization': api_key,
         'Content-Type': 'application/json'
     }
+    
+    # URL Cleaning: if the URL already contains /api/3, don't let callers add it again effectively
+    # Many callers do f"{ckan_url.rstrip('/')}/api/3/action/..."
+    # If ckan_url is "https://example.com/api/3/", we get .../api/3/api/3/...
+    # Let's handle this in a more robust way if possible, but for now we fix the callers.
     try:
         # SECURITY FIX: Validate the URL and resolve IP once to prevent DNS Rebinding
         resolved_ip = validate_external_url(url)
@@ -70,9 +75,9 @@ def ckan_request(method, url, api_key, **kwargs):
 
         # SECURITY FIX: Disable redirects to prevent SSRF bypass via internal redirects
         if method.upper() == 'GET':
-            response = requests.get(target_url, headers=headers, params=kwargs.get('params', {}), timeout=20, allow_redirects=False)
+            response = requests.get(target_url, headers=headers, params=kwargs.get('params', {}), timeout=20, allow_redirects=False, verify=verify_ssl)
         elif method.upper() == 'POST':
-            response = requests.post(target_url, headers=headers, data=json.dumps(kwargs.get('json_data')), files=kwargs.get('files'), timeout=60, allow_redirects=False)
+            response = requests.post(target_url, headers=headers, data=json.dumps(kwargs.get('json_data')), files=kwargs.get('files'), timeout=60, allow_redirects=False, verify=verify_ssl)
         else:
             raise ValueError("Unsupported HTTP method")
 
@@ -100,52 +105,58 @@ def ckan_request(method, url, api_key, **kwargs):
         return None
 
     except (requests.exceptions.RequestException, ValueError) as e:
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         current_app.logger.error(f"CKAN request failed with a network, HTTP, or validation error: {e}", exc_info=True)
         raise
 
-def get_user_organizations(api_key, ckan_url):
+def get_user_organizations(api_key, ckan_url, verify_ssl=True):
     """Fetches the organizations a user is a member of."""
-    api_url = f"{ckan_url.rstrip('/')}/api/3/action/organization_list_for_user"
-    return ckan_request('GET', api_url, api_key)
+    # Robust URL construction: handle both "site.com" and "site.com/api/3/"
+    base = ckan_url.rstrip('/')
+    if '/api/3' not in base:
+        api_url = f"{base}/api/3/action/organization_list_for_user"
+    else:
+        api_url = f"{base}/action/organization_list_for_user"
+        
+    return ckan_request('GET', api_url, api_key, verify_ssl=verify_ssl)
 
-def package_show(api_key, ckan_url, dataset_name_or_id):
+def package_show(api_key, ckan_url, dataset_name_or_id, verify_ssl=True):
     """Fetches details of a dataset (project), returns None if not found."""
-    api_url = f"{ckan_url.rstrip('/')}/api/3/action/package_show"
-    headers = {'Authorization': api_key}
+    base = ckan_url.rstrip('/')
+    if '/api/3' not in base:
+        api_url = f"{base}/api/3/action/package_show"
+    else:
+        api_url = f"{base}/action/package_show"
+        
     params = {'id': dataset_name_or_id}
     
     try:
-        # SECURITY FIX: Validate the URL and resolve IP once to prevent DNS Rebinding
-        resolved_ip = validate_external_url(api_url)
-        
-        # Rewrite URL to use IP address but satisfy server with Host header
-        parsed_url = urlparse(api_url)
-        headers['Host'] = parsed_url.hostname
-        target_url = api_url.replace(parsed_url.hostname, resolved_ip, 1)
-
-        response = requests.get(target_url, headers=headers, params=params, timeout=20, allow_redirects=False)
-        
-        if response.status_code == 404:
+        result = ckan_request('GET', api_url, api_key, verify_ssl=verify_ssl, params=params)
+        return result
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
             return None
-
-        response.raise_for_status()
-        
-        json_response = response.json()
-        if json_response.get('success'):
-            return json_response.get('result')
-        else:
-            error_details = json_response.get('error', {})
-            error_message = error_details.get('message', 'Unknown CKAN API error in package_show')
-            current_app.logger.error(f"CKAN API Error (package_show): {error_message} - Details: {error_details}")
-            raise requests.exceptions.HTTPError(f"CKAN API Error: {error_message}")
-
+        error_details = e.response.json().get('error', {})
+        error_message = error_details.get('message', 'Unknown CKAN API error in package_show')
+        current_app.logger.error(f"CKAN API Error (package_show): {error_message} - Details: {error_details}")
+        raise requests.exceptions.HTTPError(f"CKAN API Error: {error_message}")
     except (requests.exceptions.RequestException, ValueError) as e:
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         current_app.logger.error(f"CKAN package_show request failed: {e}", exc_info=True)
         raise
 
-def package_create(api_key, ckan_url, name, title, owner_org, private, notes):
+def package_create(api_key, ckan_url, name, title, owner_org, private, notes, verify_ssl=True):
     """Creates a new dataset (project)."""
-    api_url = f"{ckan_url.rstrip('/')}/api/3/action/package_create"
+    base = ckan_url.rstrip('/')
+    if '/api/3' not in base:
+        api_url = f"{base}/api/3/action/package_create"
+    else:
+        api_url = f"{base}/action/package_create"
+
     data = {
         'name': name,
         'title': title,
@@ -153,11 +164,16 @@ def package_create(api_key, ckan_url, name, title, owner_org, private, notes):
         'private': private,
         'notes': notes
     }
-    return ckan_request('POST', api_url, api_key, json_data=data)
+    return ckan_request('POST', api_url, api_key, verify_ssl=verify_ssl, json_data=data)
 
-def resource_create(api_key, ckan_url, package_id, name, description, file_content):
+def resource_create(api_key, ckan_url, package_id, name, description, file_content, verify_ssl=True):
     """Uploads a file as a new resource."""
-    api_url = f"{ckan_url.rstrip('/')}/api/3/action/resource_create"
+    base = ckan_url.rstrip('/')
+    if '/api/3' not in base:
+        api_url = f"{base}/api/3/action/resource_create"
+    else:
+        api_url = f"{base}/action/resource_create"
+
     data = {
         'package_id': package_id,
         'name': name,
@@ -170,7 +186,7 @@ def resource_create(api_key, ckan_url, package_id, name, description, file_conte
         resolved_ip = validate_external_url(api_url)
         target_url = api_url.replace(urlparse(api_url).hostname, resolved_ip, 1)
 
-        response = requests.post(target_url, data=data, files=files, headers=headers, timeout=300, allow_redirects=False)
+        response = requests.post(target_url, data=data, files=files, headers=headers, timeout=300, allow_redirects=False, verify=verify_ssl)
 
         if response.status_code >= 400:
             error_message = f"CKAN returned an error (Status {response.status_code}) during resource creation."
@@ -193,12 +209,20 @@ def resource_create(api_key, ckan_url, package_id, name, description, file_conte
             raise requests.exceptions.HTTPError(f"CKAN API Error: {error_message}")
 
     except (requests.exceptions.RequestException, ValueError) as e:
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         current_app.logger.error(f"CKAN resource_create failed: {e}", exc_info=True)
         raise
 
-def resource_update(api_key, ckan_url, resource_id, file_content, name, description):
+def resource_update(api_key, ckan_url, resource_id, file_content, name, description, verify_ssl=True):
     """Updates an existing resource with a new file."""
-    api_url = f"{ckan_url.rstrip('/')}/api/3/action/resource_update"
+    base = ckan_url.rstrip('/')
+    if '/api/3' not in base:
+        api_url = f"{base}/api/3/action/resource_update"
+    else:
+        api_url = f"{base}/action/resource_update"
+
     data = {'id': resource_id, 'name': name, 'description': description}
     files = {'upload': (name, file_content)}
     headers = {'Authorization': api_key, 'Host': urlparse(api_url).hostname}
@@ -207,7 +231,7 @@ def resource_update(api_key, ckan_url, resource_id, file_content, name, descript
         resolved_ip = validate_external_url(api_url)
         target_url = api_url.replace(urlparse(api_url).hostname, resolved_ip, 1)
 
-        response = requests.post(target_url, data=data, files=files, headers=headers, timeout=300, allow_redirects=False)
+        response = requests.post(target_url, data=data, files=files, headers=headers, timeout=300, allow_redirects=False, verify=verify_ssl)
 
         if response.status_code >= 400:
             error_message = f"CKAN returned an error (Status {response.status_code}) during resource update."
@@ -230,5 +254,8 @@ def resource_update(api_key, ckan_url, resource_id, file_content, name, descript
             raise requests.exceptions.HTTPError(f"CKAN API Error: {error_message}")
 
     except (requests.exceptions.RequestException, ValueError) as e:
+        if not verify_ssl:
+            import urllib3
+            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         current_app.logger.error(f"CKAN resource_update failed: {e}", exc_info=True)
         raise

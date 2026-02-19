@@ -137,9 +137,16 @@ def settings():
         if ckan_form.submit_ckan_settings.data and ckan_form.validate_on_submit():
             current_user.ckan_url = ckan_form.ckan_url.data.strip()
             current_user.ckan_api_key = ckan_form.ckan_api_key.data.strip()
+            current_user.ckan_verify_ssl = ckan_form.ckan_verify_ssl.data
             db.session.commit()
             flash(_('CKAN settings updated successfully.'), 'success')
             return redirect(url_for('main.settings', _anchor='ckan-settings-section'))
+
+    # Initialize forms with current user data if it's a GET request
+    if request.method == 'GET':
+        ckan_form.ckan_url.data = current_user.ckan_url
+        ckan_form.ckan_api_key.data = current_user.ckan_api_key
+        ckan_form.ckan_verify_ssl.data = current_user.ckan_verify_ssl
 
     # This part is for GET requests
     user_api_tokens = APIToken.query.filter_by(user_id=current_user.id).order_by(APIToken.created_at.desc()).all()

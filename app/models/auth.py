@@ -130,6 +130,7 @@ class User(UserMixin, db.Model):
     force_password_change = db.Column(db.Boolean, default=False, nullable=False)
     ckan_url = db.Column(db.String(255), nullable=True)
     ckan_api_key = db.Column(db.String(255), nullable=True)
+    ckan_verify_ssl = db.Column(db.Boolean, default=True, nullable=False)
     calendar_token = db.Column(db.String(64), nullable=True)
     team_calendar_token = db.Column(db.String(64), nullable=True)
 
@@ -213,8 +214,8 @@ class APIToken(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
     name = db.Column(db.String(100), nullable=False)
-    token_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
-    prefix_hash = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    token_hash = db.Column(db.String(256), unique=True, nullable=False, index=True)
+    prefix_hash = db.Column(db.String(256), unique=True, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     last_used_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
