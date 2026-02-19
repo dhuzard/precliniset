@@ -293,6 +293,9 @@
         </div>
     </footer>
 
+    <!-- Global Resource Shortcuts -->
+    <script src="{{ url_for('static', filename='js/resource_shortcuts.js') }}" nonce="{{ csp_nonce }}"></script>
+
     {% block scripts %}
     {# Alpine.js Components #}
     <script src="{{ url_for('static', filename='js/app_components.js') }}" nonce="{{ csp_nonce }}"></script>

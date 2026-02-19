@@ -1,33 +1,74 @@
 {# Macro to render a form field with Bootstrap styling and error display #}
 {% macro render_field(field) %}
-    {#
-      Jinja macros have access to a special 'kwargs' variable that contains
-      all the keyword arguments passed to the macro call. We don't need to
-      explicitly define it in the signature.
-    #}
-    {% set field_id = kwargs.get('id', field.id) %}
-    
-    {# Determine field class, allowing override from kwargs #}
-    {% set field_class = kwargs.get('class', 'form-control') %}
-    {% if field.type == 'SelectField' or field.type == 'SelectMultipleField' %}
-        {% set field_class = field_class | replace('form-control', 'form-select') %}
+{#
+Jinja macros have access to a special 'kwargs' variable that contains
+all the keyword arguments passed to the macro call. We don't need to
+explicitly define it in the signature.
+#}
+{% set field_id = kwargs.get('id', field.id) %}
+
+{# Determine field class, allowing override from kwargs #}
+{% set field_class = kwargs.get('class', 'form-control') %}
+{% if field.type == 'SelectField' or field.type == 'SelectMultipleField' %}
+{% set field_class = field_class | replace('form-control', 'form-select') %}
+{% endif %}
+
+{% if field.label is defined and field.label is not none %}
+{# Render the label, explicitly setting the 'for' attribute to match the field's id #}
+{{ field.label(for=field_id, class="form-label") }}
+{% endif %}
+
+{% if field is defined and field is not none %}
+{# Render the field, passing all the original kwargs from the call site #}
+{{ field(class=field_class, **kwargs) }}
+{% endif %}
+
+{% if field.errors %}
+<div class="invalid-feedback d-block"> {# Use Bootstrap's invalid-feedback #}
+    {% for error in field.errors %}
+    {{ error }}<br> {# Display errors directly #}
+    {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# Macro to render a resource selection field with Create and Refresh buttons #}
+{% macro render_resource_field(field, create_url=None, refresh_endpoint=None, create_title=_('Create New'),
+refresh_title=_('Refresh List')) %}
+{% set field_id = kwargs.get('id', field.id) %}
+
+{% if field.label %}
+{{ field.label(class="form-label mb-0") }}
+{% endif %}
+
+<div class="input-group">
+    {# Render the field itself (usually a SelectField) #}
+    {% set field_class = kwargs.get('class', 'form-select') %}
+
+    {# Ensure we pass all kwargs (like readonly, style, etc.) to the field #}
+    {{ field(class=field_class, **kwargs) }}
+
+    {% if create_url %}
+    <a href="{{ create_url }}" target="_blank" class="btn btn-outline-secondary" title="{{ create_title }}"
+        tabindex="-1">
+        <i class="fas fa-plus"></i>
+    </a>
     {% endif %}
-    
-    {% if field.label is defined and field.label is not none %}
-        {# Render the label, explicitly setting the 'for' attribute to match the field's id #}
-        {{ field.label(for=field_id, class="form-label") }}
+
+    {% if refresh_endpoint %}
+    <button type="button" class="btn btn-outline-secondary resource-refresh-btn"
+        data-refresh-endpoint="{{ refresh_endpoint }}" data-target-id="{{ field_id }}" title="{{ refresh_title }}"
+        tabindex="-1">
+        <i class="fas fa-sync-alt"></i>
+    </button>
     {% endif %}
-    
-    {% if field is defined and field is not none %}
-        {# Render the field, passing all the original kwargs from the call site #}
-        {{ field(class=field_class, **kwargs) }}
-    {% endif %}
-    
-    {% if field.errors %}
-        <div class="invalid-feedback d-block"> {# Use Bootstrap's invalid-feedback #}
-            {% for error in field.errors %}
-                {{ error }}<br> {# Display errors directly #}
-            {% endfor %}
-        </div>
-    {% endif %}
+</div>
+
+{% if field.errors %}
+<div class="invalid-feedback d-block">
+    {% for error in field.errors %}
+    {{ error }}<br>
+    {% endfor %}
+</div>
+{% endif %}
 {% endmacro %}

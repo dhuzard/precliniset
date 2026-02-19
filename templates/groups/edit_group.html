@@ -1,6 +1,6 @@
 {# templates/groups/edit_group.html #}
 {% extends 'base.html' %}
-{% from "_formhelpers.html" import render_field %}
+{% from "_formhelpers.html" import render_field, render_resource_field %}
 
 {% block title %}{{ _('Edit') if group else _('Create') }} {{ _('Experimental Group') }}{% endblock %}
 
@@ -119,6 +119,7 @@
         /* Supprime le décalage de la croix de suppression */
         .select2-container--bootstrap-5 .select2-selection--single .select2-selection__clear {
             margin-top: 0.35rem !important;
+            margin-right: -0.75rem !important;
         }
 
         /* Fix pour le décalage de la recherche dans le dropdown */
@@ -161,27 +162,56 @@
                     {% if not group %}
                     <!-- Project selector only for new groups -->
                     <div class="col-md-4">
-                        {{ render_field(form.project, id="project_select", placeholder=_('Select Project...'),
-                        readonly=is_read_only) }}
+                        {{ render_resource_field(form.project,
+                        id="project_select",
+                        placeholder=_('Select Project...'),
+                        readonly=is_read_only,
+                        create_url=url_for('projects.create_project') if not is_read_only else None,
+                        refresh_endpoint='/api/v1/projects/' if not is_read_only else None
+                        ) }}
                     </div>
                     <div class="col-md-4">
                         {{ render_field(form.name, readonly=is_read_only) }}
                     </div>
                     <div class="col-md-2">
-                        {{ render_field(form.model, id="model_select", readonly=is_read_only) }}
+                        {{ render_resource_field(form.model,
+                        id="model_select",
+                        readonly=is_read_only,
+                        create_url=url_for('core_models.edit_model', model_type='animal_model') if not is_read_only else
+                        None,
+                        refresh_endpoint='/api/v1/animal_models/' if not is_read_only else None
+                        ) }}
                     </div>
                     <div class="col-md-2">
-                        {{ render_field(form.ethical_approval, id="ethical_approval_select", readonly=is_read_only) }}
+                        {{ render_resource_field(form.ethical_approval,
+                        id="ethical_approval_select",
+                        readonly=is_read_only,
+                        create_url=url_for('ethical_approvals.create_edit_ethical_approval') if not is_read_only else
+                        None,
+                        refresh_endpoint='/api/v1/ethical_approvals/' if not is_read_only else None
+                        ) }}
                     </div>
                     {% else %}
                     <div class="col-md-6">
                         {{ render_field(form.name, readonly=is_read_only) }}
                     </div>
                     <div class="col-md-3">
-                        {{ render_field(form.model, id="model_select", readonly=is_read_only) }}
+                        {{ render_resource_field(form.model,
+                        id="model_select",
+                        readonly=is_read_only,
+                        create_url=url_for('core_models.edit_model', model_type='animal_model') if not is_read_only else
+                        None,
+                        refresh_endpoint='/api/v1/animal_models/' if not is_read_only else None
+                        ) }}
                     </div>
                     <div class="col-md-3">
-                        {{ render_field(form.ethical_approval, id="ethical_approval_select", readonly=is_read_only) }}
+                        {{ render_resource_field(form.ethical_approval,
+                        id="ethical_approval_select",
+                        readonly=is_read_only,
+                        create_url=url_for('ethical_approvals.create_edit_ethical_approval') if not is_read_only else
+                        None,
+                        refresh_endpoint='/api/v1/ethical_approvals/' if not is_read_only else None
+                        ) }}
                     </div>
                     {% endif %}
                 </div>

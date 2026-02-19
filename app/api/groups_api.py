@@ -53,6 +53,21 @@ assignable_user_model = groups_ns.model("AssignableUser", {
 })
 
 
+@ns.route("/")
+class ProjectList(Resource):
+    decorators = [token_required]
+
+    @ns.doc("list_projects")
+    @ns.marshal_list_with(ns.model("ProjectSimple", {
+        "id": fields.Integer(readonly=True),
+        "name": fields.String(required=True),
+        "slug": fields.String(required=True)
+    }))
+    def get(self):
+        """List all accessible projects."""
+        return g.current_user.get_accessible_projects()
+
+
 @ns.route("/<string:project_slug_or_id>/groups")
 class GroupList(Resource):
     decorators = [token_required]

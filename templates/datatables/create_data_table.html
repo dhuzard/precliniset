@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from "_formhelpers.html" import render_field %}
+{% from "_formhelpers.html" import render_field, render_resource_field %}
 {% from "components/project_sidebar.html" import project_sidebar with context %}
 
 {% block content %}
@@ -17,19 +17,11 @@
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">{{ render_field(form.group, class="form-select select2-enable") }}</div>
                     <div class="col-md-3">
-                        <label class="form-label mb-0">{{ _('Protocol') }}</label>
-                        <div class="input-group">
-                            {{ render_field(form.protocol, class="form-select select2-enable", style="flex: 1 1 auto;
-                            width: 1%;", label_visible=false) }}
-                            <a href="{{ url_for('core_models.edit_model', model_type='protocol') }}" target="_blank"
-                                class="btn btn-outline-secondary" title="{{ _('Create New Protocol') }}">
-                                <i class="fas fa-plus"></i>
-                            </a>
-                            <button type="button" class="btn btn-outline-secondary" id="refresh-protocols-btn"
-                                title="{{ _('Refresh List') }}">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
+                        {{ render_resource_field(form.protocol,
+                        class="form-select select2-enable",
+                        create_url=url_for('core_models.edit_model', model_type='protocol'),
+                        refresh_endpoint='/api/v1/protocols/'
+                        ) }}
                     </div>
                     <div class="col-md-2">{{ render_field(form.date, type='date') }}</div>
                     <div class="col-md-2">{{ render_field(form.assigned_to_id, class="form-select select2-enable") }}
@@ -185,64 +177,6 @@
         assigneeSelect.addEventListener('change', checkCompetency);
         protocolSelect.addEventListener('change', checkCompetency);
 
-        // --- NEW: Refresh Protocols Logic ---
-        const refreshBtn = document.getElementById('refresh-protocols-btn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function () {
-                const icon = this.querySelector('i');
-                icon.classList.add('fa-spin'); // Add spinning animation
-
-                fetch('/api/v1/protocols/', {
-                    headers: {
-                        'X-CSRFToken': "{{ csrf_token() }}",
-                        'Content-Type': 'application/json'
-                    }
-                })
-                    .then(response => {
-                        if (!response.ok) throw new Error('Network response was not ok');
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Store currently selected value to restore if possible
-                        const currentVal = $(protocolSelect).val();
-
-                        // Clear existing options (except the first placeholder if exists)
-                        // Assuming select2, we need to clear via standard DOM then trigger change
-                        protocolSelect.innerHTML = '';
-
-                        // Add Placeholder/Empty option from WTForms usually
-                        const placeholderOption = new Option("{{ _('Select Protocol') }}", "", true, true);
-                        placeholderOption.disabled = true; // Optional: disable placeholder if desired
-                        protocolSelect.add(placeholderOption);
-
-                        data.forEach(protocol => {
-                            const option = new Option(protocol.name, protocol.id, false, false);
-                            protocolSelect.add(option);
-                        });
-
-                        // Restore selection or defaults
-                        if (currentVal) {
-                            $(protocolSelect).val(currentVal).trigger('change');
-                        } else {
-                            $(protocolSelect).val("").trigger('change');
-                        }
-
-                        // Use Bootstrap/Select2 API to verify update if needed
-                        // For standard select2:
-                        if ($(protocolSelect).hasClass("select2-hidden-accessible")) {
-                            $(protocolSelect).trigger('change');
-                        }
-
-                    })
-                    .catch(error => {
-                        console.error('Error fetching protocols:', error);
-                        alert("{{ _('Failed to refresh protocols. Please try again.') }}");
-                    })
-                    .finally(() => {
-                        icon.classList.remove('fa-spin');
-                    });
-            });
-        }
     });
 </script>
 {% endblock %}
