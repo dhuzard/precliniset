@@ -35,12 +35,13 @@ def token_required(f):
         # 3. Fallback to Session Authentication (Strict CSRF)
         if current_user.is_authenticated:
             # For session auth, we MUST enforce CSRF to prevent attacks
-            try:
-                # Flask-WTF looks for X-CSRFToken header or csrf_token form field
-                # We can call validate_csrf directly which checks request.headers['X-CSRFToken']
-                validate_csrf(request.headers.get('X-CSRFToken'))
-            except Exception: # Catching generic exception as validate_csrf raises various errors depending on version
-                raise Unauthorized('Session active but CSRF token missing or invalid')
+            if current_app.config.get('WTF_CSRF_ENABLED', True):
+                try:
+                    # Flask-WTF looks for X-CSRFToken header or csrf_token form field
+                    # We can call validate_csrf directly which checks request.headers['X-CSRFToken']
+                    validate_csrf(request.headers.get('X-CSRFToken'))
+                except Exception: # Catching generic exception as validate_csrf raises various errors depending on version
+                    raise Unauthorized('Session active but CSRF token missing or invalid')
             
             g.current_user = current_user
             return f(*args, **kwargs)

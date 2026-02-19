@@ -96,6 +96,8 @@ class TeamItem(Resource):
 
     @ns.doc('get_team')
     @ns.marshal_with(team_model)
+    @ns.response(404, 'Team not found')
+    @ns.response(403, 'Permission denied')
     def get(self, team_id):
         """Get a single team"""
         team = db.session.get(Team, team_id)
@@ -108,6 +110,8 @@ class TeamItem(Resource):
     @ns.doc('update_team')
     @ns.expect(team_model)
     @ns.marshal_with(team_model)
+    @ns.response(404, 'Team not found')
+    @ns.response(403, 'Permission denied')
     def put(self, team_id):
         """Update a team"""
         team = db.session.get(Team, team_id)
@@ -122,6 +126,8 @@ class TeamItem(Resource):
 
     @ns.doc('delete_team')
     @ns.response(204, 'Team deleted')
+    @ns.response(404, 'Team not found')
+    @ns.response(403, 'Permission denied')
     def delete(self, team_id):
         """Delete a team"""
         team = db.session.get(Team, team_id)
@@ -140,6 +146,8 @@ class TeamMemberList(Resource):
     @ns.doc('add_team_member')
     @ns.expect(membership_model)
     @permission_required('Team', 'manage_members')
+    @ns.response(404, 'Team or User not found')
+    @ns.response(403, 'Permission denied')
     def post(self, team_id):
         """Add a member to a team"""
         team = db.session.get(Team, team_id)
@@ -168,6 +176,8 @@ class TeamMemberItem(Resource):
     @ns.doc('remove_team_member')
     @ns.response(204, 'Member removed')
     @permission_required('Team', 'manage_members')
+    @ns.response(404, 'Team or Membership not found')
+    @ns.response(403, 'Permission denied')
     def delete(self, team_id, user_id):
         """Remove a member from a team"""
         team = db.session.get(Team, team_id)
@@ -222,6 +232,8 @@ class UserItem(Resource):
     @ns.doc('get_user')
     @ns.marshal_with(user_model)
     @permission_required('User', 'view')
+    @ns.response(404, 'User not found')
+    @ns.response(403, 'Permission denied')
     def get(self, user_id):
         """Get a single user"""
         user = db.session.get(User, user_id)
@@ -233,6 +245,8 @@ class UserItem(Resource):
     @ns.expect(user_model)
     @ns.marshal_with(user_model)
     @permission_required('User', 'edit')
+    @ns.response(404, 'User not found')
+    @ns.response(403, 'Permission denied')
     def put(self, user_id):
         """Update a user"""
         user = db.session.get(User, user_id)
@@ -248,6 +262,8 @@ class UserItem(Resource):
     @ns.doc('delete_user')
     @ns.response(204, 'User deleted')
     @permission_required('User', 'delete')
+    @ns.response(404, 'User not found')
+    @ns.response(403, 'Permission denied')
     def delete(self, user_id):
         """Delete a user"""
         user = db.session.get(User, user_id)
@@ -273,6 +289,7 @@ class RoleList(Resource):
     @ns.expect(role_input_model)
     @ns.marshal_with(role_model, code=201)
     @permission_required('Role', 'create')
+    @ns.response(403, 'Permission denied')
     def post(self):
         """Create a new role"""
         data = request.get_json()
@@ -298,6 +315,8 @@ class RoleItem(Resource):
     @ns.doc('get_role')
     @ns.marshal_with(role_model)
     @permission_required('Role', 'view')
+    @ns.response(404, 'Role not found')
+    @ns.response(403, 'Permission denied')
     def get(self, role_id):
         """Get a single role"""
         role = db.session.get(Role, role_id)
@@ -309,6 +328,8 @@ class RoleItem(Resource):
     @ns.expect(role_input_model)
     @ns.marshal_with(role_model)
     @permission_required('Role', 'edit')
+    @ns.response(404, 'Role not found')
+    @ns.response(403, 'Permission denied')
     def put(self, role_id):
         """Update a role"""
         role = db.session.get(Role, role_id)
@@ -333,6 +354,9 @@ class RoleItem(Resource):
     @ns.doc('delete_role')
     @ns.response(204, 'Role deleted')
     @permission_required('Role', 'delete')
+    @ns.response(404, 'Role not found')
+    @ns.response(403, 'Permission denied')
+    @ns.response(400, 'Cannot delete assigned role')
     def delete(self, role_id):
         """Delete a role"""
         role = db.session.get(Role, role_id)
@@ -356,6 +380,9 @@ class TeamMemberRole(Resource):
     @ns.doc('assign_role')
     @ns.expect(role_assignment_model)
     @permission_required('Team', 'manage_members')
+    @ns.response(404, 'Team/User/Role not found')
+    @ns.response(403, 'Permission denied')
+    @ns.response(400, 'Role mismatch')
     def post(self, team_id, user_id):
         """Assign a role to a user within a team"""
         team = db.session.get(Team, team_id)
@@ -387,6 +414,8 @@ class TeamMemberRoleItem(Resource):
     @ns.doc('unassign_role')
     @ns.response(204, 'Role unassigned')
     @permission_required('Team', 'manage_members')
+    @ns.response(404, 'Team or Role assignment not found')
+    @ns.response(403, 'Permission denied')
     def delete(self, team_id, user_id, role_id):
         """Unassign a role from a user within a team"""
         team = db.session.get(Team, team_id)

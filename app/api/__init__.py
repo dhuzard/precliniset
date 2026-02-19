@@ -40,6 +40,9 @@ from .groups_api import ns as groups_ns_from_projects
 api.add_namespace(datatables_ns)
 api.add_namespace(groups_ns_from_projects)
 
+from .datatables_api import server_side_ns as datatables_server_side_ns
+api.add_namespace(datatables_server_side_ns)
+
 from .core_models_api import ns_am as animal_models_ns
 from .core_models_api import ns_protocols as protocols_ns
 

@@ -122,6 +122,12 @@
             <h3 id="api-tokens-section">{{ _('API Token Management') }}</h3>
 <p class="text-muted small">{{ _('API tokens allow external applications or scripts to access your Precliniset data programmatically.') }}</p>
 
+<div class="alert alert-info">
+    <i class="fas fa-book me-2"></i> {{ _('View the interactive API documentation:') }}
+    <a href="/api/v1/doc/" target="_blank" class="alert-link">Swagger UI</a> {{ _('or') }} 
+    <a href="/api/v1/redoc" target="_blank" class="alert-link">Redoc</a>
+</div>
+
 {% if newly_generated_token %}
 <div class="alert alert-warning">
     <strong>{{ _('Your New API Token:') }}</strong>

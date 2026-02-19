@@ -68,6 +68,7 @@ class DataTableList(Resource):
 
     @ns.doc('list_datatables')
     @ns.marshal_list_with(datatable_model)
+    @ns.response(404, 'Group not found or permission denied')
     def get(self, group_id):
         """List all datatables for a group."""
         group = self.get_group(group_id, 'read')
@@ -76,6 +77,8 @@ class DataTableList(Resource):
     @ns.doc('create_datatable')
     @ns.expect(datatable_model)
     @ns.marshal_with(datatable_model, code=201)
+    @ns.response(403, 'Permission denied')
+    @ns.response(404, 'Group not found')
     def post(self, group_id):
         """Create a new datatable in a group."""
         group = self.get_group(group_id, 'edit_exp_group')
@@ -120,6 +123,7 @@ class DataTableItem(Resource):
 
     @ns.doc('get_datatable')
     @ns.marshal_with(datatable_model)
+    @ns.response(404, 'DataTable not found or permission denied')
     def get(self, datatable_id):
         """Fetch a single datatable."""
         return self.get_datatable(datatable_id, 'read')
@@ -127,6 +131,7 @@ class DataTableItem(Resource):
     @ns.doc('update_datatable')
     @ns.expect(datatable_model)
     @ns.marshal_with(datatable_model)
+    @ns.response(404, 'DataTable not found or permission denied')
     def put(self, datatable_id):
         """Update a datatable."""
         datatable = self.get_datatable(datatable_id, 'edit_datatable')
@@ -153,6 +158,7 @@ class DataTableItem(Resource):
 
     @ns.doc('delete_datatable')
     @ns.response(204, 'DataTable deleted')
+    @ns.response(404, 'DataTable not found or permission denied')
     def delete(self, datatable_id):
         """Delete a datatable."""
         datatable = self.get_datatable(datatable_id, 'delete_datatable')
@@ -313,6 +319,10 @@ class DataTableMove(Resource):
     @ns.doc('move_datatable')
     @ns.expect(ns.model('DataTableMovePayload', {'new_date': fields.String(required=True)}))
     @ns.marshal_with(datatable_move_response_model)
+    @ns.response(400, 'Invalid date format')
+    @ns.response(403, 'Permission denied')
+    @ns.response(404, 'DataTable not found')
+    @ns.response(500, 'Internal server error')
     def post(self, datatable_id):
         """Move a DataTable to a new date."""
         dt = db.session.get(DataTable, datatable_id)
@@ -367,6 +377,10 @@ class DataTableReassign(Resource):
     @ns.doc('reassign_datatable')
     @ns.expect(ns.model('DataTableReassignPayload', {'assignee_id': fields.Integer}))
     @ns.marshal_with(datatable_reassign_response_model)
+    @ns.response(400, 'Validation error')
+    @ns.response(403, 'Permission denied')
+    @ns.response(404, 'DataTable not found')
+    @ns.response(500, 'Internal server error')
     def post(self, datatable_id):
         """Reassign a DataTable to a user."""
         dt = db.session.get(DataTable, datatable_id)

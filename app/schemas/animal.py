@@ -90,6 +90,37 @@ class AnimalSchema(BaseModel):
 
     @field_validator('measurements')
     @classmethod
+    def validate_content(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Validate measurement content types and specific fields."""
+        if not v:
+            return v
+            
+        from datetime import datetime
+        
+        for key, value in v.items():
+            # 1. Enforce Scalar Values (no nested dicts/lists)
+            if isinstance(value, (dict, list)):
+                raise ValueError(f"Measurement '{key}' has invalid type {type(value).__name__}. Only scalar values allowed.")
+                
+            # 2. Validate Specific Known Fields
+            if key == 'death_date' and value:
+                try:
+                    # Expect ISO format YYYY-MM-DD
+                    datetime.strptime(str(value).split('T')[0], '%Y-%m-%d')
+                except ValueError:
+                    raise ValueError(f"Invalid death_date format in measurements: {value}")
+            
+            if key == 'last_weight' and value is not None:
+                if not isinstance(value, (int, float)):
+                     try:
+                         float(value)
+                     except (ValueError, TypeError):
+                         raise ValueError(f"Invalid last_weight in measurements: {value}")
+
+        return v
+
+    @field_validator('measurements')
+    @classmethod
     def sanitize_measurements(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
         """Sanitize string values in measurements."""
         if not v:
@@ -99,7 +130,7 @@ class AnimalSchema(BaseModel):
         sanitized = {}
         for key, value in v.items():
             # Sanitize Key
-            safe_key = html.escape(key.strip()) if isinstance(key, str) else key
+            safe_key = html.escape(str(key).strip())
             
             # Sanitize Value
             safe_val = value

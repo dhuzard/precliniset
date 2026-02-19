@@ -231,6 +231,59 @@ document.addEventListener('DOMContentLoaded', function () {
 
         els.btns.addEvent.addEventListener('click', () => addEventRow());
 
+        // --- Protocol Refresh Logic ---
+        async function refreshProtocols(btn) {
+            const icon = btn.querySelector('i');
+            if (icon) icon.classList.add('fa-spin');
+
+            try {
+                const response = await fetch(apiBaseUrl + '/protocols/', {
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf_token }
+                });
+                if (!response.ok) throw new Error('Failed to fetch protocols');
+                const newProtocols = await response.json();
+
+                // Update Config
+                CONFIG.protocols = newProtocols;
+
+                // Re-initialize all dropdowns
+                document.querySelectorAll('.protocol-select').forEach(select => {
+                    const currentVal = $(select).val();
+                    $(select).empty(); // Clear existing options
+
+                    // Re-init select2 with new data
+                    initializeSelect2(select, CONFIG.protocols, CONFIG.i18n.selectProtocol, false);
+
+                    // Restore value if it still exists
+                    if (currentVal && CONFIG.protocols.some(p => p.id == currentVal)) {
+                        $(select).val(currentVal).trigger('change');
+                    } else {
+                        $(select).val(null).trigger('change');
+                    }
+                });
+
+                // Also update the bulk add dropdown if it exists/is open
+                const bulkSelect = document.getElementById('bulk_protocol_id');
+                if (bulkSelect) {
+                    $(bulkSelect).empty();
+                    initializeSelect2(bulkSelect, CONFIG.protocols, CONFIG.i18n.selectProtocol, false);
+                }
+
+            } catch (error) {
+                console.error('Error refreshing protocols:', error);
+                alert('Failed to refresh protocols.');
+            } finally {
+                if (icon) icon.classList.remove('fa-spin');
+            }
+        }
+
+        els.tbody.addEventListener('click', function (e) {
+            const btn = e.target.closest('.refresh-protocols-btn');
+            if (btn) {
+                refreshProtocols(btn);
+            }
+        });
+
         els.btns.save.addEventListener('click', () => {
             const currentData = getUIData();
             if (JSON.stringify(initialDataState) === JSON.stringify(currentData)) {

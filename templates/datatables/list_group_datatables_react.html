@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}React DataTables{% endblock %}
+
+{% block head_extra %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='dist/assets/main-Bhw-DM_e.css') }}">
+{% endblock %}
+
+{% block content %}
+<div id="react-root" data-group-id="{{ group.id }}" data-csrf-token="{{ csrf_token() }}"
+    data-protocols='{{ protocols | tojson | safe }}' data-urls='{
+            "analyze": "{{ url_for("datatables.analyze_selected_datatables") }}",
+            "download": "{{ url_for("datatables.download_merged_selected_datatables") }}",
+            "delete": "{{ url_for("datatables.batch_delete_datatables") }}"
+         }'></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script type="module" src="{{ url_for('static', filename='dist/assets/main-BKZ1cX88.js') }}"></script>
+{% endblock %}

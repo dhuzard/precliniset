@@ -33,6 +33,8 @@ class AnalyteList(Resource):
     @ns.doc('create_analyte')
     @ns.expect(analyte_model)
     @ns.marshal_with(analyte_model, code=201)
+    @ns.response(403, 'Permission denied')
+    @ns.response(409, 'Analyte name conflict')
     def post(self):
         """Create a new analyte"""
         if not user_has_permission(g.current_user, 'Analyte', 'create'):
@@ -71,6 +73,8 @@ class AnalyteItem(Resource):
     @ns.doc('update_analyte')
     @ns.expect(analyte_model)
     @ns.marshal_with(analyte_model)
+    @ns.response(403, 'Permission denied')
+    @ns.response(409, 'Analyte name conflict')
     def put(self, id):
         """Update an analyte"""
         if not user_has_permission(g.current_user, 'Analyte', 'edit'):
@@ -96,6 +100,8 @@ class AnalyteItem(Resource):
 
     @ns.doc('delete_analyte')
     @ns.response(204, 'Analyte deleted')
+    @ns.response(403, 'Permission denied')
+    @ns.response(400, 'Cannot delete analyte because it is in use')
     def delete(self, id):
         """Delete an analyte"""
         if not user_has_permission(g.current_user, 'Analyte', 'delete'):
@@ -103,8 +109,15 @@ class AnalyteItem(Resource):
 
         analyte = Analyte.query.get_or_404(id)
         
-        if analyte.animal_models.first() or analyte.protocol_associations.first():
-            ns.abort(400, "Cannot delete analyte because it is in use by animal or protocol models.")
+        # Check if analyte is in use
+        if analyte.animal_models or analyte.protocol_associations:
+             # Note: logic seems to check if relationship is not empty. 
+             # Original code: if analyte.animal_models.first() or analyte.protocol_associations.first():
+             # I need to keep the logic correct. Pydantic/SQLAlchemy quirks.
+             if analyte.animal_models and analyte.animal_models.first():
+                  ns.abort(400, "Cannot delete analyte because it is in use by animal models.")
+             if analyte.protocol_associations and analyte.protocol_associations.first():
+                   ns.abort(400, "Cannot delete analyte because it is in use by protocol models.")
 
         db.session.delete(analyte)
         db.session.commit()

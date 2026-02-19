@@ -52,12 +52,25 @@ def create_app(config_class=None):
     template_dir = os.path.join(base_dir, '../templates')
     static_dir = os.path.join(base_dir, '../static')
     app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
-    # --- CONFIGURE SERVER-SIDE SESSIONS ---
-    import redis
-    app.config['SESSION_TYPE'] = 'redis'
-    app.config['SESSION_PERMANENT'] = False
-    # Use the same Redis URL as Celery
-    app.config['SESSION_REDIS'] = redis.from_url(os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/1'))
+
+    # --- LOAD CONFIGURATION FIRST ---
+    if isinstance(config_class, str):
+        app.config.from_object(config_class)
+        if config_class == 'app.config.Config':
+            from app.config import Config
+            Config.check_configuration()
+    else:
+        app.config.from_object(config_class)
+        if hasattr(config_class, 'check_configuration'):
+            config_class.check_configuration()
+
+    # --- CONFIGURE SERVER-SIDE SESSIONS (Default to Redis if not set) ---
+    if app.config.get('SESSION_TYPE') is None and not app.testing:
+        import redis
+        app.config['SESSION_TYPE'] = 'redis'
+        app.config['SESSION_PERMANENT'] = False
+        # Use the same Redis URL as Celery
+        app.config['SESSION_REDIS'] = redis.from_url(os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/1'))
     
     # Load Version
     try:
@@ -68,21 +81,10 @@ def create_app(config_class=None):
         app.config['VERSION'] = '0.0.0-dev'
 
     # Initialize the extension
-    sess.init_app(app)
+    if not app.testing:
+        sess.init_app(app)
 
     app.jinja_env.add_extension('jinja2.ext.do')
-
-    if isinstance(config_class, str):
-        app.config.from_object(config_class)
-        # Import the class dynamically to call the check if it's a string
-        # But simpler: if we are using the default Config, we can check it.
-        if config_class == 'app.config.Config':
-            from app.config import Config
-            Config.check_configuration()
-    else:
-        app.config.from_object(config_class)
-        if hasattr(config_class, 'check_configuration'):
-            config_class.check_configuration()
 
     # Configure Werkzeug form limits after config is loaded
     # These are needed for large forms (like editing 200 animals at once)

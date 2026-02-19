@@ -35,9 +35,14 @@ services:
     env_file:
       - .env
     volumes:
+      - ./app:/app/app
+      - ./templates:/app/templates
+      - ./static:/app/static
       - uploads_data:/app/uploads
       - instance_data:/app/instance
       - ./migrations:/app/migrations
+    # OVERRIDE for Development: Use Flask dev server with reloading
+    command: flask run --host=0.0.0.0 --port=5000 --debug
     networks:
       - app_network
     extra_hosts:

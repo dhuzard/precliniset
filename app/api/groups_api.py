@@ -47,6 +47,11 @@ group_item_model = groups_ns.model("ExperimentalGroupItem", {
     "animal_data": fields.List(fields.Raw, description="List of animal dictionaries")
 })
 
+assignable_user_model = groups_ns.model("AssignableUser", {
+    "id": fields.Integer(readonly=True),
+    "email": fields.String(required=True)
+})
+
 
 @ns.route("/<string:project_slug_or_id>/groups")
 class GroupList(Resource):
@@ -69,7 +74,9 @@ class GroupList(Resource):
             ns.abort(404, "Project not found or permission denied.")
         return project
 
+    @ns.doc('list_groups_for_project')
     @ns.marshal_list_with(group_output_model)
+    @ns.response(404, 'Project not found or permission denied')
     def get(self, project_slug_or_id):
         """List all experimental groups for a project."""
         project = self.get_project(project_slug_or_id, "read")
@@ -85,7 +92,11 @@ class GroupList(Resource):
             groups.append(g_dict)
         return groups
 
+    @ns.doc('create_group_for_project')
+    @ns.expect(group_model)
     @ns.marshal_with(group_output_model, code=201)
+    @ns.response(403, 'Permission denied')
+    @ns.response(404, 'Project not found')
     def post(self, project_slug_or_id):
         """Create a new experimental group in a project."""
         project = self.get_project(project_slug_or_id, "edit")
@@ -129,7 +140,9 @@ class GroupItem(Resource):
             api.abort(404, "Group not found or permission denied.")
         return group
 
+    @api.doc("get_group")
     @api.marshal_with(group_item_model)
+    @api.response(404, "Group not found or permission denied")
     def get(self, group_id):
         """Fetch a single experimental group."""
         group = self.get_group(group_id, "read")
@@ -141,7 +154,9 @@ class GroupItem(Resource):
             "animal_data": [a.to_dict() for a in group.animals]
         }
 
+    @api.doc("update_group")
     @api.marshal_with(group_item_model)
+    @api.response(404, "Group not found or permission denied")
     def put(self, group_id):
         """Update an experimental group."""
         group = self.get_group(group_id, "edit_exp_group")
@@ -169,6 +184,8 @@ class GroupItem(Resource):
 
     @api.doc("delete_group")
     @api.response(204, "Group deleted")
+    @api.response(400, "Cannot delete group with data tables")
+    @api.response(404, "Group not found or permission denied")
     def delete(self, group_id):
         """Delete an experimental group."""
         group = self.get_group(group_id, "delete_exp_group")
@@ -489,6 +506,9 @@ class GroupAssignableUsers(Resource):
     decorators = [token_required]
     
     @api.doc("get_assignable_users")
+    @api.marshal_list_with(assignable_user_model)
+    @api.response(404, "Group not found")
+    @api.response(403, "Permission denied")
     def get(self, group_id):
         """Get list of assignable users for a group."""
         from sqlalchemy import or_

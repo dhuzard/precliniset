@@ -176,9 +176,9 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # Use in-memory SQLite database
     WTF_CSRF_ENABLED = False  # Disable CSRF forms validation in tests
-    SESSION_TYPE = None # Disable server-side sessions for tests
+    SESSION_TYPE = 'filesystem' # Use filesystem sessions for tests
     LOGIN_DISABLED = False # Keep login enabled to test auth, but can be disabled for specific tests
-    SERVER_NAME = 'localhost.localdomain' # Required for url_for to work in tests without a request context
+    # SERVER_NAME = 'localhost.localdomain' # Required for url_for to work in tests without a request context
     # Disable caching and compression for tests
     ENABLE_CACHING = False
     ENABLE_COMPRESSION = False

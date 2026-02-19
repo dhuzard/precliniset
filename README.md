@@ -20,6 +20,11 @@ Standardize your science.
 - **DataTables**: Enter data via a web grid, Excel upload or raw data import with python scripts, with real-time validation.
 
 ![Data Entry Grid](docs/img/datatable_grid.png)
+### ⚡ Modern React Frontend (New!)
+The DataTables interface has been rebuilt using **React**, **TypeScript**, and **TanStack Query** for a faster, more responsive experience.
+-   **Performance**: Efficient data loading and rendering for large datasets.
+-   **Advanced Filtering**: Filter by Protocol and Date Range with immediate feedback.
+-   **Batch Actions**: Analyze, Download, or Delete multiple records at once.
 
 ### 📈 Built-in Analysis & Statistics
 Instant insights. Precliniset can run statistical tests (ANOVA, t-test, Kruskal-Wallis) and generates figures to visualize your data.
@@ -89,6 +94,15 @@ Start the services and access the application at `http://localhost:8000`.
 python manage.py start
 ```
 
+### 5. Frontend Development (Optional)
+To work on the React frontend:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+The frontend assets are built into `app/static/dist` for production.
+
 For detailed instructions, see **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 ---
@@ -100,6 +114,7 @@ Full documentation is available in the `docs/` folder or by building the MkDocs 
 *   [Advanced Import Wizard](docs/features/import_wizard.md)
 *   [Biobanking & Samples](docs/features/samples.md)
 *   [Administration & API](docs/features/admin.md)
+*   **API Documentation**: Access the interactive API docs at `/api/v1/doc/` (Swagger UI) or `/api/v1/redoc` (Redoc).
 
 ---
 

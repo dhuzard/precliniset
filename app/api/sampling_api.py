@@ -40,6 +40,8 @@ class StorageList(Resource):
     @ns.doc('create_storage_location')
     @ns.expect(storage_model)
     @ns.marshal_with(storage_model, code=201)
+    @ns.response(403, 'Permission denied')
+    @ns.response(404, 'Team not found')
     def post(self):
         """Create a new storage location"""
         user = g.current_user
@@ -47,7 +49,10 @@ class StorageList(Resource):
         team_id = data['team_id']
         
         team = db.session.get(Team, team_id)
-        if not team or (not user.is_super_admin and not user.is_member_of(team)):
+        if not team:
+            ns.abort(404, "Team not found")
+            
+        if not user.is_super_admin and not user.is_member_of(team):
             ns.abort(403, "Permission denied: You must be a member of the team to add storage.")
 
         new_storage = Storage(
@@ -77,6 +82,8 @@ class StorageItem(Resource):
 
     @ns.doc('get_storage_location')
     @ns.marshal_with(storage_model)
+    @ns.response(404, 'Storage not found')
+    @ns.response(403, 'Permission denied')
     def get(self, storage_id):
         """Get a single storage location"""
         return self.get_storage(storage_id, 'read')
@@ -84,6 +91,8 @@ class StorageItem(Resource):
     @ns.doc('update_storage_location')
     @ns.expect(storage_model)
     @ns.marshal_with(storage_model)
+    @ns.response(404, 'Storage not found')
+    @ns.response(403, 'Permission denied')
     def put(self, storage_id):
         """Update a storage location"""
         storage = self.get_storage(storage_id, 'edit')
@@ -96,6 +105,9 @@ class StorageItem(Resource):
 
     @ns.doc('delete_storage_location')
     @ns.response(204, 'Storage deleted')
+    @ns.response(404, 'Storage not found')
+    @ns.response(403, 'Permission denied')
+    @ns.response(400, 'Cannot delete storage containing samples')
     def delete(self, storage_id):
         """Delete a storage location"""
         storage = self.get_storage(storage_id, 'edit')
@@ -135,6 +147,8 @@ class SampleList(Resource):
 
     @ns_samples.doc('list_samples')
     @ns_samples.marshal_list_with(sample_model)
+    @ns_samples.response(404, 'Group not found')
+    @ns_samples.response(403, 'Permission denied')
     def get(self, group_id):
         """List all samples for a group"""
         group = ExperimentalGroup.query.get_or_404(group_id)
@@ -145,6 +159,8 @@ class SampleList(Resource):
     @ns_samples.doc('log_sample')
     @ns_samples.expect(sample_model)
     @ns_samples.marshal_with(sample_model, code=201)
+    @ns_samples.response(404, 'Group not found')
+    @ns_samples.response(403, 'Permission denied')
     def post(self, group_id):
         """Log a new sample for a group"""
         group = ExperimentalGroup.query.get_or_404(group_id)

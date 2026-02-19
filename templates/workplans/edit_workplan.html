@@ -658,8 +658,20 @@
         <td class="week-number"></td>
         <td class="projected-date"></td>
         <td class="animal-age"></td>
-        <td><select name="protocol_id" class="form-select protocol-select" required
-                aria-label="{{ _('Protocol') }}"></select></td>
+        <td>
+            <div class="input-group input-group-sm">
+                <select name="protocol_id" class="form-select protocol-select" required
+                    aria-label="{{ _('Protocol') }}"></select>
+                <a href="{{ url_for('core_models.edit_model', model_type='protocol') }}" target="_blank"
+                    class="btn btn-outline-secondary" title="{{ _('Create New Protocol') }}" tabindex="-1">
+                    <i class="fas fa-plus"></i>
+                </a>
+                <button type="button" class="btn btn-outline-secondary refresh-protocols-btn"
+                    title="{{ _('Refresh List') }}" tabindex="-1">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </td>
         <td><input type="text" name="event_name" class="form-control" aria-label="{{ _('Event Name') }}"></td>
         <td><select name="assigned_to_id" class="form-select assignee-select" aria-label="{{ _('Assignee') }}"></select>
         </td>

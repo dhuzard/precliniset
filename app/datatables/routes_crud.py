@@ -787,6 +787,24 @@ def list_group_datatables(group_id):
     all_protocols = ProtocolModel.query.order_by(ProtocolModel.name).all()
 
     return render_template('datatables/list_group_datatables.html', group=group_obj, protocols=all_protocols)
+
+@datatables_bp.route('/list/react/group/<string:group_id>')
+@login_required
+def list_group_datatables_react(group_id):
+    # Handle cases where group_id might be literally 'undefined' from client-side issues
+    if group_id == 'undefined':
+        flash(lazy_gettext("Invalid group identifier provided."), "error")
+        return redirect(url_for('main.index'))
+
+    group_obj = db.session.get(ExperimentalGroup, group_id)
+    if not group_obj: flash(lazy_gettext("Group not found."), "error"); return redirect(url_for('main.index'))
+    
+    if not check_group_permission(group_obj, 'read'): flash(lazy_gettext("Permission denied."), "danger"); return redirect(url_for('groups.manage_groups'))
+
+    # Fetch all protocols for the filter dropdown
+    all_protocols = ProtocolModel.query.order_by(ProtocolModel.name).all()
+
+    return render_template('datatables/list_group_datatables_react.html', group=group_obj, protocols=all_protocols)
 @datatables_bp.route('/batch_delete_datatables', methods=['POST'])
 @login_required
 def batch_delete_datatables():
